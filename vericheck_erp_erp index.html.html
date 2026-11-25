@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VeriCheck ERP | 회계 내부통제 및 입력 오류 사전 검증 시스템</title>
+
+  <!-- Pretendard 웹폰트 로드 -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <!-- Tailwind CSS CDN 로드 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons CDN 로드 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN 로드 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Tailwind 커스텀 설정 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* 기본 폰트 및 숫자 정렬(Tabular Nums) 최적화 */
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* 입력 필드 오류 강조 애니메이션 */
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+    .input-error-highlight {
+      border-color: #ef4444 !important;
+      background-color: #fef2f2 !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+      animation: shakeError 0.35s ease-in-out;
+    }
+    /* 스크롤바 커스터마이징 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row antialiased selection:bg-blue-100 selection:text-blue-900">
+
+  <!-- 모바일 상단 헤더 -->
+  <header class="lg:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-inner">
+        <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <span class="font-bold text-base tracking-tight">VeriCheck ERP</span>
+        <span class="block text-[11px] text-slate-400">회계 내부통제 검증 시스템</span>
+      </div>
+    </div>
+    <button id="mobile-menu-btn" type="button" class="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" aria-label="메뉴 열기">
+      <i data-lucide="menu" class="w-6 h-6"></i>
+    </button>
+  </header>
+
+  <!-- 모바일 사이드바 오버레이 -->
+  <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 hidden lg:hidden" onclick="toggleMobileSidebar(false)"></div>
+
+  <!-- 좌측 사이드바 네비게이션 -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-100 flex flex-col justify-between transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-in-out shrink-0 border-r border-slate-800">
+    <div>
+      <!-- 시스템 브랜드 영역 -->
+      <div class="p-6 border-b border-slate-800/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-950/50">
+            <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-bold text-lg tracking-tight text-white">VeriCheck ERP</h1>
+              <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded">v2.6</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">회계 내부통제 및 입력 오류 사전 검증</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 로그인 사용자 프로필 카드 -->
+      <div class="px-4 py-4">
+        <div class="bg-slate-800/70 border border-slate-700/70 rounded-xl p-3.5 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-300 font-bold text-sm shrink-0">
+            김신입
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5">
+              <p class="text-sm font-semibold text-white truncate">회계팀 김신입 사원</p>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0" title="온라인"></span>
+            </div>
+            <p class="text-xs text-slate-400 tabular-nums mt-0.5">사번: 2026-0412 · 일반전표 권한</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 네비게이션 메뉴 3개 -->
+      <nav class="px-3 space-y-1.5 mt-1" aria-label="주 메뉴">
+        <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">업무 모듈 메뉴</p>
+
+        <button type="button" onclick="switchTab('tab-input')" id="nav-tab-input"
+          class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-sm">
+          <i data-lucide="file-check-2" class="w-4 h-4 shrink-0"></i>
+          <span class="text-left leading-snug">회계 보고 입력 및 실시간 검증</span>
+        </button>
+
+        <button type="button" onclick="switchTab('tab-ledger')" id="nav-tab-ledger"
+          class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+          <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i>
+          <span class="text-left leading-snug">전사 회계 원장 및 검증 이력</span>
+        </button>
+
+        <button type="button" onclick="switchTab('tab-baseline')" id="nav-tab-baseline"
+          class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+          <i data-lucide="database" class="w-4 h-4 shrink-0"></i>
+          <span class="text-left leading-snug">전년도(2025년) 기준 데이터 관리</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- 사이드바 하단 시스템 상태 및 데모 초기화 -->
+    <div class="p-4 border-t border-slate-800/80 space-y-3">
+      <div class="bg-slate-800/50 rounded-xl p-3 text-xs text-slate-400 space-y-1">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-300 font-medium">단일 원장 DB 연동</span>
+          <span class="text-emerald-400 font-semibold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>정상 가동
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">2025 회계연도 확정 결산 기준 데이터와 실시간 대조 중</p>
+      </div>
+
+      <button type="button" onclick="openResetConfirmModal()"
+        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 transition">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        <span>시연용 초기 데이터로 복원</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 메인 콘텐츠 영역 -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- 데스크톱 상단 상태 바 -->
+    <header class="hidden lg:flex bg-white border-b border-slate-200 px-8 py-4 items-center justify-between sticky top-0 z-20">
+      <div>
+        <div class="flex items-center gap-2 text-xs text-slate-500 mb-0.5">
+          <span>경영정보시스템(MIS) 내부통제 모듈</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          <span id="breadcrumb-current" class="text-blue-600 font-semibold">회계 보고 입력 및 실시간 검증</span>
+        </div>
+        <h2 id="page-title" class="text-xl font-bold text-slate-900">회계 보고 입력 및 실시간 검증</h2>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span>회계기수: <strong class="text-slate-800">제 12기 (2026년)</strong></span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-medium">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-emerald-600"></i>
+          <span>이상치 사전 차단 규칙 활성</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 메인 뷰 컨테이너 -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+      <!-- ===================================================================== -->
+      <!-- [탭 1] 회계 보고 입력 및 실시간 검증 (기본 메인 화면) -->
+      <!-- ===================================================================== -->
+      <section id="tab-input" class="tab-panel space-y-6">
+
+        <!-- 상단: 빠른 시연용 테스트 프리셋 배너 -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 rounded-2xl p-5 text-white shadow-sm border border-slate-800">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">시연 테스트 모드</span>
+                <h3 class="text-base font-bold text-white">빠른 시연용 테스트 프리셋</h3>
+              </div>
+              <p class="text-xs text-slate-300 mt-1">버튼을 클릭하면 신입사원의 실제 입력 사례(정상 및 대표 오류 유형)가 아래 폼에 자동 입력됩니다.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 shrink-0">
+              <!-- 시나리오 A -->
+              <button type="button" onclick="applyPreset('A')"
+                class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/40 text-left transition group">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 group-hover:scale-110 transition"></span>
+                <div>
+                  <span class="block text-xs font-bold text-emerald-300">시나리오 A: 정상 범위</span>
+                  <span class="block text-[11px] text-slate-300">사무용품 52박스 × 25,500원</span>
+                </div>
+              </button>
+
+              <!-- 시나리오 B -->
+              <button type="button" onclick="applyPreset('B')"
+                class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/40 text-left transition group">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0 group-hover:scale-110 transition"></span>
+                <div>
+                  <span class="block text-xs font-bold text-rose-300">시나리오 B: 자릿수 '0' 추가</span>
+                  <span class="block text-[11px] text-slate-300">원자재 10,000개 (10배 오기)</span>
+                </div>
+              </button>
+
+              <!-- 시나리오 C -->
+              <button type="button" onclick="applyPreset('C')"
+                class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-left transition group">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 group-hover:scale-110 transition"></span>
+                <div>
+                  <span class="block text-xs font-bold text-amber-300">시나리오 C: 수량·단가 바뀜</span>
+                  <span class="block text-[11px] text-slate-300">운송비 85,000건 × 120원</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 중단 2단 그리드: 좌측 입력 폼 + 우측 전년도 실시간 비교 패널 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          <!-- 좌측 입력 폼 (7컬럼) -->
+          <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <i data-lucide="file-edit" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">신입사원 회계 실적/비용 보고서 작성</h3>
+                  <p class="text-xs text-slate-500">제출 시 전사 단일 데이터베이스(Single Source of Truth)에 실시간 반영됩니다.</p>
+                </div>
+              </div>
+              <span id="correction-mode-badge" class="hidden px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300">
+                오류 수정 모드
+              </span>
+            </div>
+
+            <form id="accounting-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-5">
+              <!-- 기본 메타 정보 3열 -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label for="report-date" class="block text-xs font-semibold text-slate-700 mb-1.5">보고 일자</label>
+                  <input type="date" id="report-date" value="2026-11-25" required
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 tabular-nums" />
+                </div>
+
+                <div>
+                  <label for="report-dept" class="block text-xs font-semibold text-slate-700 mb-1.5">보고 부서</label>
+                  <select id="report-dept"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="회계팀">회계팀</option>
+                    <option value="구매팀">구매팀</option>
+                    <option value="영업관리팀">영업관리팀</option>
+                    <option value="물류팀">물류팀</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="report-author" class="block text-xs font-semibold text-slate-700 mb-1.5">작성자명</label>
+                  <input type="text" id="report-author" value="김신입" required
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+              </div>
+
+              <!-- 회계 계정 및 품목 선택 -->
+              <div>
+                <label for="report-item" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                  회계 계정 및 품목 선택 <span class="text-blue-600 font-normal">(2025년 기준 데이터 연동)</span>
+                </label>
+                <select id="report-item" onchange="handleItemChange()"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <!-- JS에서 동적으로 채워짐 -->
+                </select>
+              </div>
+
+              <!-- 수량 및 단가 입력 2열 -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label for="report-qty" class="block text-xs font-semibold text-slate-700">금년 보고 수량</label>
+                    <span id="hint-prev-qty" class="text-[11px] text-slate-500 tabular-nums">전년 평균: 50박스</span>
+                  </div>
+                  <div class="relative">
+                    <input type="number" id="report-qty" min="1" step="1" placeholder="예: 50" required
+                      oninput="updateLiveComparison()"
+                      class="w-full pl-3.5 pr-14 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                    <span id="qty-unit-badge" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      박스
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label for="report-price" class="block text-xs font-semibold text-slate-700">금년 보고 단가 (원)</label>
+                    <span id="hint-prev-price" class="text-[11px] text-slate-500 tabular-nums">전년 평균: 25,000원</span>
+                  </div>
+                  <div class="relative">
+                    <input type="number" id="report-price" min="1" step="1" placeholder="예: 25000" required
+                      oninput="updateLiveComparison()"
+                      class="w-full pl-3.5 pr-12 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      원
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 자동 산출 합계 금액 박스 -->
+              <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span class="text-xs font-semibold text-slate-600 block">자동 산출 합계 금액 (수량 × 단가)</span>
+                  <span id="total-amount-korean" class="text-[11px] text-slate-500 mt-0.5 block">수량과 단가를 입력하면 자동 계산됩니다.</span>
+                </div>
+                <div class="text-right">
+                  <span id="calculated-total" class="text-2xl font-extrabold text-slate-900 tabular-nums tracking-tight">0</span>
+                  <span class="text-sm font-bold text-slate-600 ml-1">원</span>
+                </div>
+              </div>
+
+              <!-- 적요 / 보고 사유 -->
+              <div>
+                <label for="report-note" class="block text-xs font-semibold text-slate-700 mb-1.5">적요 / 보고 사유</label>
+                <textarea id="report-note" rows="2" placeholder="거래 내역 및 집행 사유를 간략히 입력하세요."
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+              </div>
+
+              <!-- 하단 액션 버튼 -->
+              <div class="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="resetInputForm()"
+                  class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold flex items-center justify-center gap-2 transition">
+                  <i data-lucide="eraser" class="w-4 h-4"></i>
+                  <span>초기화</span>
+                </button>
+                <button type="submit"
+                  class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm shadow-blue-600/20 flex items-center justify-center gap-2 transition">
+                  <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                  <span>회계 보고 검증 및 제출</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- 우측: 전년도(2025년) 동일 항목 기준 데이터 및 실시간 비교 패널 (5컬럼) -->
+          <div class="lg:col-span-5 space-y-5">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="git-compare" class="w-4 h-4 text-indigo-600"></i>
+                  <h3 class="text-sm font-bold text-slate-900">전년도(2025년) 동일 항목 기준 비교</h3>
+                </div>
+                <span id="live-overall-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                  입력 대기
+                </span>
+              </div>
+
+              <div class="p-5 space-y-5">
+                <!-- 전년도 기준 요약 카드 3종 -->
+                <div>
+                  <p class="text-xs font-semibold text-slate-500 mb-2.5 flex items-center gap-1.5">
+                    <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                    <span id="baseline-card-title">2025년 확정 기준 데이터 (사무용품비)</span>
+                  </p>
+                  <div class="grid grid-cols-3 gap-2.5">
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <span class="text-[11px] text-slate-500 block">전년도 평균 수량</span>
+                      <strong id="base-qty-display" class="text-sm font-bold text-slate-900 tabular-nums mt-1 block">50박스</strong>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <span class="text-[11px] text-slate-500 block">전년도 평균 단가</span>
+                      <strong id="base-price-display" class="text-sm font-bold text-slate-900 tabular-nums mt-1 block">25,000원</strong>
+                    </div>
+                    <div class="p-3 rounded-xl bg-blue-50/60 border border-blue-100">
+                      <span class="text-[11px] text-blue-700 block font-medium">전년도 기준 총액</span>
+                      <strong id="base-total-display" class="text-sm font-bold text-blue-900 tabular-nums mt-1 block">1,250,000원</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 실시간 증감률 모니터링 -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold text-slate-700">실시간 입력값 편차 분석 (전년 대비)</p>
+                    <span class="text-[11px] text-slate-400">허용 임계치: ±30% 이내</span>
+                  </div>
+
+                  <!-- 수량 증감률 행 -->
+                  <div class="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
+                    <div>
+                      <span class="text-xs font-semibold text-slate-700 block">수량 증감률</span>
+                      <span id="comp-qty-sub" class="text-[11px] text-slate-400 tabular-nums">기준 50박스 대비 -</span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                      <span id="comp-qty-pct" class="text-sm font-bold text-slate-400 tabular-nums">-</span>
+                      <span id="comp-qty-badge" class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-500">대기</span>
+                    </div>
+                  </div>
+
+                  <!-- 단가 증감률 행 -->
+                  <div class="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
+                    <div>
+                      <span class="text-xs font-semibold text-slate-700 block">단가 증감률</span>
+                      <span id="comp-price-sub" class="text-[11px] text-slate-400 tabular-nums">기준 25,000원 대비 -</span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                      <span id="comp-price-pct" class="text-sm font-bold text-slate-400 tabular-nums">-</span>
+                      <span id="comp-price-badge" class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-500">대기</span>
+                    </div>
+                  </div>
+
+                  <!-- 총액 증감률 행 -->
+                  <div class="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
+                    <div>
+                      <span class="text-xs font-semibold text-slate-700 block">총액 증감률</span>
+                      <span id="comp-total-sub" class="text-[11px] text-slate-400 tabular-nums">기준 1,250,000원 대비 -</span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                      <span id="comp-total-pct" class="text-sm font-bold text-slate-400 tabular-nums">-</span>
+                      <span id="comp-total-badge" class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-500">대기</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 실시간 지능형 진단 요약 박스 -->
+                <div id="live-diagnostic-box" class="rounded-xl p-4 bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-3">
+                  <i data-lucide="info" class="w-4 h-4 text-slate-400 shrink-0 mt-0.5"></i>
+                  <div id="live-diagnostic-text" class="leading-relaxed">
+                    수량과 단가를 입력하면 전년도 실적과 자동 비교하여 자릿수 오기, 항목 바뀜, 급등락 여부를 실시간으로 진단합니다.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 내부통제 검증 규칙 안내 카드 -->
+            <div class="bg-blue-50/70 rounded-2xl border border-blue-100 p-4 text-xs text-blue-900 space-y-2">
+              <div class="font-bold flex items-center gap-1.5 text-blue-800">
+                <i data-lucide="cpu" class="w-4 h-4 text-blue-600"></i>
+                <span>VeriCheck 지능형 오류 탐지 알고리즘 안내</span>
+              </div>
+              <ul class="space-y-1 text-blue-800/80 list-disc list-inside leading-relaxed">
+                <li><strong>자릿수 오기 탐지:</strong> 전년 대비 8~12배(0 추가) 또는 0.08~0.12배(0 누락) 자동 식별</li>
+                <li><strong>교차 입력 탐지:</strong> 수량과 단가 입력란이 서로 뒤바뀐 경우 패턴 대조 검출</li>
+                <li><strong>임계치 통제:</strong> 정상 변동 범위(±30%) 초과 시 전표 승인을 차단하고 사유서 요구</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- [탭 2] 전사 회계 원장 및 검증 이력 (통합 DB 및 성과 요약) -->
+      <!-- ===================================================================== -->
+      <section id="tab-ledger" class="tab-panel hidden space-y-6">
+
+        <!-- 상단 KPI 카드 4개 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">총 회계 보고 건수</span>
+              <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <p id="kpi-total-count" class="text-2xl font-extrabold text-slate-900 tabular-nums mt-3">0건</p>
+            <p class="text-xs text-slate-400 mt-1">2026년 전사 통합 원장 등록 기준</p>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">정상 자동 승인 건수</span>
+              <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <p id="kpi-approved-count" class="text-2xl font-extrabold text-emerald-600 tabular-nums mt-3">0건</p>
+            <p class="text-xs text-slate-400 mt-1">정상 승인 및 실수 수정 후 승인 포함</p>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-rose-200 p-5 shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-rose-700">사전 차단된 입력 실수 건수</span>
+              <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                <i data-lucide="shield-ban" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <p id="kpi-blocked-count" class="text-2xl font-extrabold text-rose-600 tabular-nums mt-3">0건</p>
+            <p class="text-xs text-rose-500/90 mt-1">경고창 차단 후 입력자 재확인 완료</p>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-blue-200 p-5 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-blue-700">사전 예방된 회계 오기 금액</span>
+              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                <i data-lucide="piggy-bank" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <p id="kpi-prevented-amount" class="text-2xl font-extrabold text-blue-700 tabular-nums mt-3">0원</p>
+            <p class="text-xs text-slate-500 mt-1">오류 전표 원장 반영 차단 누적액</p>
+          </div>
+        </div>
+
+        <!-- 중단 시각화 차트 (Chart.js) -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">품목별 전년도(2025년) 실적 vs 금년도(2026년) 누적 보고 금액 비교</h3>
+              <p class="text-xs text-slate-500 mt-0.5">전사 통합 데이터베이스에 반영된 계정별 집행 추이를 실시간으로 시각화합니다.</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+              <span class="flex items-center gap-1.5 text-slate-600">
+                <span class="w-3 h-3 rounded-xs bg-slate-400 inline-block"></span>2025년 기준 실적
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-600">
+                <span class="w-3 h-3 rounded-xs bg-blue-600 inline-block"></span>2026년 누적 보고액
+              </span>
+            </div>
+          </div>
+
+          <div class="relative w-full h-72 sm:h-80">
+            <canvas id="comparisonChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 하단 전사 회계 원장 및 감사 로그 테이블 -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">전사 회계 원장 및 내부통제 감사 로그</h3>
+              <p class="text-xs text-slate-500 mt-0.5">모든 회계 보고 이력과 검증 통과·차단·예외 승인 상태가 기록됩니다.</p>
+            </div>
+
+            <!-- 상태 필터 버튼 -->
+            <div class="flex flex-wrap items-center gap-1.5" id="ledger-filters">
+              <button type="button" onclick="setLedgerFilter('ALL')" data-filter="ALL"
+                class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition">전체</button>
+              <button type="button" onclick="setLedgerFilter('정상 승인')" data-filter="정상 승인"
+                class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">정상 승인</button>
+              <button type="button" onclick="setLedgerFilter('실수 수정 후 승인')" data-filter="실수 수정 후 승인"
+                class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">실수 수정 후 승인</button>
+              <button type="button" onclick="setLedgerFilter('예외 승인 대기')" data-filter="예외 승인 대기"
+                class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">예외 승인 대기</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <th class="py-3.5 px-4 whitespace-nowrap">보고일시</th>
+                  <th class="py-3.5 px-4 whitespace-nowrap">부서</th>
+                  <th class="py-3.5 px-4 whitespace-nowrap">작성자</th>
+                  <th class="py-3.5 px-4 whitespace-nowrap">품목</th>
+                  <th class="py-3.5 px-4 text-right whitespace-nowrap">수량</th>
+                  <th class="py-3.5 px-4 text-right whitespace-nowrap">단가</th>
+                  <th class="py-3.5 px-4 text-right whitespace-nowrap">총액</th>
+                  <th class="py-3.5 px-4 whitespace-nowrap">검증 결과</th>
+                </tr>
+              </thead>
+              <tbody id="ledger-table-body" class="divide-y divide-slate-100 text-sm">
+                <!-- JS 렌더링 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- [탭 3] 전년도(2025년) 기준 데이터 관리 -->
+      <!-- ===================================================================== -->
+      <section id="tab-baseline" class="tab-panel hidden space-y-6">
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">전년도(2025년) 확정 결산 기준 마스터 데이터</h3>
+              <p class="text-xs text-slate-500 mt-0.5">신입사원 보고서 검증 시 대조 기준이 되는 품목별 전년도 평균 수량 및 단가입니다.</p>
+            </div>
+            <button type="button" onclick="openBaselineModal()"
+              class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition shrink-0">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>새 기준 항목 추가</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <th class="py-3.5 px-5 whitespace-nowrap">코드</th>
+                  <th class="py-3.5 px-5 whitespace-nowrap">회계 계정</th>
+                  <th class="py-3.5 px-5 whitespace-nowrap">품목명</th>
+                  <th class="py-3.5 px-5 text-right whitespace-nowrap">2025년 기준 수량</th>
+                  <th class="py-3.5 px-5 text-right whitespace-nowrap">2025년 기준 단가</th>
+                  <th class="py-3.5 px-5 text-right whitespace-nowrap">2025년 기준 총액</th>
+                  <th class="py-3.5 px-5 text-center whitespace-nowrap">관리</th>
+                </tr>
+              </thead>
+              <tbody id="baseline-table-body" class="divide-y divide-slate-100 text-sm">
+                <!-- JS 렌더링 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- [핵심 모달] 이상 수치 감지 경고 모달창 (Internal Control Alert) -->
+  <!-- ========================================================================= -->
+  <div id="anomaly-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-rose-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+      <!-- 상단 경고 배너 -->
+      <div class="bg-gradient-to-r from-rose-600 to-red-700 px-6 py-4 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-rose-200 block">Internal Control Alert · 전표 승인 자동 차단</span>
+            <h3 class="text-lg font-bold leading-tight">회계 입력 이상 수치 감지 경고</h3>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded-lg bg-black/25 text-xs font-semibold">제출 보류됨</span>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- 지능형 오류 원인 자동 진단 문구 -->
+        <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 flex items-start gap-3">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600 shrink-0 mt-0.5"></i>
+          <div>
+            <p class="text-xs font-bold text-rose-800 uppercase tracking-wide">AI 내부통제 시스템 자동 진단 결과</p>
+            <p id="modal-diagnosis-msg" class="text-sm font-bold text-rose-950 mt-1 leading-snug">
+              숫자 '0'이 하나 더 입력된 자릿수 오기(약 10배 초과) 가능성이 매우 높습니다.
+            </p>
+            <p id="modal-item-subtitle" class="text-xs text-rose-700 mt-1">
+              대상 품목: 원자재 매입비 (핵심 공정 부품)
+            </p>
+          </div>
+        </div>
+
+        <!-- 전년도 대비 상세 비교 표 -->
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 text-xs font-bold border-b border-slate-200">
+                <th class="py-2.5 px-3.5">항목명</th>
+                <th class="py-2.5 px-3.5 text-right">전년도 기준값</th>
+                <th class="py-2.5 px-3.5 text-right">금년 입력값</th>
+                <th class="py-2.5 px-3.5 text-right">변동률(%)</th>
+                <th class="py-2.5 px-3.5 text-center">상태</th>
+              </tr>
+            </thead>
+            <tbody id="modal-comparison-tbody" class="divide-y divide-slate-100 tabular-nums">
+              <!-- JS 렌더링 -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 예외 승인 사유서 입력 영역 (버튼 클릭 시 확장) -->
+        <div id="exception-reason-box" class="hidden rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <label for="exception-reason-input" class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+              <i data-lucide="file-signature" class="w-4 h-4 text-amber-600"></i>
+              <span>예외 승인 요청 사유서 작성 (팀장 결재 상신용)</span>
+            </label>
+            <span class="text-[11px] text-amber-700">필수 입력 항목</span>
+          </div>
+          <textarea id="exception-reason-input" rows="2"
+            placeholder="실제 대량 발주, 신규 프로젝트 계약, 국제 원자재 단가 급등 등 정당한 변동 사유를 구체적으로 기재해 주세요."
+            class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+          <div class="flex justify-end">
+            <button type="button" onclick="submitWithException()"
+              class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center gap-1.5">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>사유서 첨부하여 '예외 승인 대기'로 상신</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 모달 하단 2대 핵심 선택 버튼 -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100">
+          <button type="button" onclick="toggleExceptionReasonBox()"
+            class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5">
+            <i data-lucide="file-plus-2" class="w-4 h-4 text-amber-600"></i>
+            <span>사유서 작성 후 예외 승인 요청</span>
+          </button>
+
+          <button type="button" onclick="handleFixInputAction()"
+            class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm shadow-rose-600/20 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+            <span>입력값 다시 수정하기</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- [보조 모달] 기준 데이터 추가 / 수정 모달 -->
+  <!-- ========================================================================= -->
+  <div id="baseline-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 id="baseline-modal-title" class="text-base font-bold text-slate-900">새 전년도 기준 항목 추가</h3>
+        <button type="button" onclick="closeBaselineModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="baseline-form" onsubmit="saveBaselineItem(event)" class="p-6 space-y-4">
+        <input type="hidden" id="edit-baseline-id" value="" />
+
+        <div>
+          <label for="base-account" class="block text-xs font-semibold text-slate-700 mb-1">회계 계정과목</label>
+          <input type="text" id="base-account" required placeholder="예: 복리후생비"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label for="base-name" class="block text-xs font-semibold text-slate-700 mb-1">품목명</label>
+          <input type="text" id="base-name" required placeholder="예: 임직원 정기 건강검진비"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label for="base-unit" class="block text-xs font-semibold text-slate-700 mb-1">단위</label>
+            <input type="text" id="base-unit" required placeholder="예: 명"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label for="base-qty" class="block text-xs font-semibold text-slate-700 mb-1">2025 기준 수량</label>
+            <input type="number" id="base-qty" min="1" required placeholder="40"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label for="base-price" class="block text-xs font-semibold text-slate-700 mb-1">2025 기준 단가</label>
+            <input type="number" id="base-price" min="1" required placeholder="200000"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeBaselineModal()"
+            class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">취소</button>
+          <button type="submit"
+            class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- [보조 모달] 데모 데이터 초기화 확인 모달 (confirm() 대체) -->
+  <!-- ========================================================================= -->
+  <div id="reset-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl max-w-sm w-full shadow-xl border border-slate-200 p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+          <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">시연 데이터 초기화</h3>
+          <p class="text-xs text-slate-500 mt-0.5">입력한 보고 이력과 차단 통계를 초기 상태로 되돌립니다.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeResetConfirmModal()"
+          class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">취소</button>
+        <button type="button" onclick="executeDemoReset()"
+          class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold">초기화 실행</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 우측 하단 토스트 알림 컨테이너 -->
+  <!-- ========================================================================= -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- ========================================================================= -->
+  <!-- 애플리케이션 핵심 비즈니스 로직 (JavaScript) -->
+  <!-- ========================================================================= -->
+  <script>
+    // 1. 초기 시드 데이터 정의 (2025년 기준 데이터 5개 항목)
+    const DEFAULT_BASELINE_ITEMS = [
+      {
+        id: 'ITEM-01',
+        account: '소모품비',
+        name: '사무용품비 (A4 용지 및 소모품)',
+        unit: '박스',
+        prevQty: 50,
+        prevPrice: 25000
+      },
+      {
+        id: 'ITEM-02',
+        account: '원재료비',
+        name: '원자재 매입비 (핵심 공정 부품)',
+        unit: '개',
+        prevQty: 1000,
+        prevPrice: 12000
+      },
+      {
+        id: 'ITEM-03',
+        account: '운반비',
+        name: '물류 운송비 (국내 정기 배송)',
+        unit: '건',
+        prevQty: 120,
+        prevPrice: 85000
+      },
+      {
+        id: 'ITEM-04',
+        account: '지급수수료',
+        name: 'IT·클라우드 유지보수비',
+        unit: '개월',
+        prevQty: 12,
+        prevPrice: 1500000
+      },
+      {
+        id: 'ITEM-05',
+        account: '접대비',
+        name: '영업 회의 및 접대비',
+        unit: '회',
+        prevQty: 30,
+        prevPrice: 150000
+      }
+    ];
+
+    // 초기 전사 회계 원장 샘플 데이터
+    const DEFAULT_LEDGER_ENTRIES = [
+      {
+        id: 'DOC-2026-001',
+        datetime: '2026-11-10 09:42',
+        dept: '경영지원팀',
+        author: '이대리',
+        itemId: 'ITEM-04',
+        itemName: 'IT·클라우드 유지보수비',
+        unit: '개월',
+        qty: 12,
+        price: 1520000,
+        total: 18240000,
+        status: '정상 승인',
+        note: '연간 클라우드 서버 및 ERP 유지보수 계약 정산'
+      },
+      {
+        id: 'DOC-2026-002',
+        datetime: '2026-11-14 14:15',
+        dept: '영업관리팀',
+        author: '박주임',
+        itemId: 'ITEM-05',
+        itemName: '영업 회의 및 접대비',
+        unit: '회',
+        qty: 28,
+        price: 155000,
+        total: 4340000,
+        status: '정상 승인',
+        note: '주요 고객사 정기 비즈니스 미팅 식대 정산'
+      },
+      {
+        id: 'DOC-2026-003',
+        datetime: '2026-11-18 11:05',
+        dept: '구매팀',
+        author: '김신입',
+        itemId: 'ITEM-02',
+        itemName: '원자재 매입비 (핵심 공정 부품)',
+        unit: '개',
+        qty: 1050,
+        price: 12000,
+        total: 12600000,
+        status: '실수 수정 후 승인',
+        note: '초기 10,500개 자릿수 오기 경고 차단 후 1,050개로 정정 제출'
+      },
+      {
+        id: 'DOC-2026-004',
+        datetime: '2026-11-21 16:30',
+        dept: '물류팀',
+        author: '최사원',
+        itemId: 'ITEM-03',
+        itemName: '물류 운송비 (국내 정기 배송)',
+        unit: '건',
+        qty: 165,
+        price: 88000,
+        total: 14520000,
+        status: '예외 승인 대기',
+        note: '[예외사유] 연말 성수기 긴급 출하 물량 증가에 따른 추가 배차'
+      }
+    ];
+
+    const STORAGE_KEY = 'vericheck_erp_state_v1';
+
+    // 전역 상태 객체
+    let appState = {
+      baselineItems: [],
+      ledgerEntries: [],
+      blockedCount: 1,
+      preventedErrorAmount: 113400000 // 초기 샘플 1건(126,000,000 - 12,600,000) 반영
+    };
+
+    // 런타임 임시 상태
+    let currentTab = 'tab-input';
+    let currentLedgerFilter = 'ALL';
+    let lastDetectionResult = null;
+    let pendingSubmissionPayload = null;
+    let wasRecentlyBlocked = false;
+    let comparisonChartInstance = null;
+
+    // 2. 상태 로드 및 저장 유틸리티
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.baselineItems) && parsed.baselineItems.length > 0) {
+            appState = parsed;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('로컬 스토리지 로드 실패, 기본값 사용:', e);
+      }
+      appState = {
+        baselineItems: JSON.parse(JSON.stringify(DEFAULT_BASELINE_ITEMS)),
+        ledgerEntries: JSON.parse(JSON.stringify(DEFAULT_LEDGER_ENTRIES)),
+        blockedCount: 1,
+        preventedErrorAmount: 113400000
+      };
+      saveState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.warn('로컬 스토리지 저장 실패:', e);
+      }
+    }
+
+    // 3. 숫자 및 통화 포맷팅 헬퍼
+    function formatNumber(num) {
+      if (num === null || num === undefined || isNaN(num)) return '0';
+      return Math.round(num).toLocaleString('ko-KR');
+    }
+
+    function formatSignedPercent(pct) {
+      if (pct === null || pct === undefined || isNaN(pct)) return '-';
+      const sign = pct > 0 ? '+' : '';
+      return `${sign}${pct.toFixed(1)}%`;
+    }
+
+    function formatKoreanCurrencyReadout(amount) {
+      if (!amount || amount <= 0) return '수량과 단가를 입력하면 자동 계산됩니다.';
+      const eok = Math.floor(amount / 100000000);
+      const man = Math.floor((amount % 100000000) / 10000);
+      const rest = amount % 10000;
+      let parts = [];
+      if (eok > 0) parts.push(`${formatNumber(eok)}억`);
+      if (man > 0) parts.push(`${formatNumber(man)}만`);
+      if (rest > 0 && eok === 0) parts.push(`${formatNumber(rest)}`);
+      return `한글 금액 표기: 금 ${parts.join(' ')} 원정`;
+    }
+
+    // 4. 네비게이션 및 탭 전환
+    function switchTab(tabId) {
+      currentTab = tabId;
+
+      // 패널 표시 전환
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+      const targetPanel = document.getElementById(tabId);
+      if (targetPanel) targetPanel.classList.remove('hidden');
+
+      // 사이드바 버튼 활성화 스타일 전환
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-300', 'hover:bg-slate-800/80', 'hover:text-white');
+      });
+      const activeBtn = document.getElementById(`nav-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800/80', 'hover:text-white');
+        activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+      }
+
+      // 상단 브레드크럼 및 제목 갱신
+      const titleMap = {
+        'tab-input': '회계 보고 입력 및 실시간 검증',
+        'tab-ledger': '전사 회계 원장 및 검증 이력',
+        'tab-baseline': '전년도(2025년) 기준 데이터 관리'
+      };
+      document.getElementById('breadcrumb-current').textContent = titleMap[tabId] || '';
+      document.getElementById('page-title').textContent = titleMap[tabId] || '';
+
+      // 탭별 데이터 갱신
+      if (tabId === 'tab-ledger') {
+        renderLedgerDashboard();
+      } else if (tabId === 'tab-baseline') {
+        renderBaselineTable();
+      }
+
+      // 모바일 사이드바 닫기
+      toggleMobileSidebar(false);
+    }
+
+    function toggleMobileSidebar(forceOpen) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isOpen = typeof forceOpen === 'boolean' ? forceOpen : sidebar.classList.contains('-translate-x-full');
+
+      if (isOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMobileSidebar());
+
+    // 5. [탭 1] 입력 폼 및 실시간 검증 로직
+    function populateItemDropdown() {
+      const select = document.getElementById('report-item');
+      const currentVal = select.value;
+      select.innerHTML = '';
+
+      appState.baselineItems.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `[${item.account}] ${item.name}`;
+        select.appendChild(opt);
+      });
+
+      if (currentVal && appState.baselineItems.some(i => i.id === currentVal)) {
+        select.value = currentVal;
+      }
+      handleItemChange();
+    }
+
+    function getSelectedBaselineItem() {
+      const itemId = document.getElementById('report-item').value;
+      return appState.baselineItems.find(i => i.id === itemId) || appState.baselineItems[0];
+    }
+
+    function handleItemChange() {
+      const item = getSelectedBaselineItem();
+      if (!item) return;
+
+      const prevTotal = item.prevQty * item.prevPrice;
+
+      // 입력 폼 힌트 및 단위 업데이트
+      document.getElementById('hint-prev-qty').textContent = `전년 평균: ${formatNumber(item.prevQty)}${item.unit}`;
+      document.getElementById('hint-prev-price').textContent = `전년 평균: ${formatNumber(item.prevPrice)}원`;
+      document.getElementById('qty-unit-badge').textContent = item.unit;
+
+      // 우측 전년도 기준 패널 업데이트
+      document.getElementById('baseline-card-title').textContent = `2025년 확정 기준 데이터 (${item.name})`;
+      document.getElementById('base-qty-display').textContent = `${formatNumber(item.prevQty)}${item.unit}`;
+      document.getElementById('base-price-display').textContent = `${formatNumber(item.prevPrice)}원`;
+      document.getElementById('base-total-display').textContent = `${formatNumber(prevTotal)}원`;
+
+      // 오류 하이라이트 해제
+      clearInputHighlights();
+      updateLiveComparison();
+    }
+
+    // 이상 수치 탐지 핵심 알고리즘
+    function analyzeAnomaly(item, qty, price) {
+      const prevQty = item.prevQty;
+      const prevPrice = item.prevPrice;
+      const prevTotal = prevQty * prevPrice;
+      const total = qty * price;
+
+      const qtyPct = ((qty - prevQty) / prevQty) * 100;
+      const pricePct = ((price - prevPrice) / prevPrice) * 100;
+      const totalPct = ((total - prevTotal) / prevTotal) * 100;
+
+      const qtyRatio = qty / prevQty;
+      const priceRatio = price / prevPrice;
+      const totalRatio = total / prevTotal;
+
+      // 1) 수량·단가 뒤바뀜 실수 탐지 (수량이 전년 단가와 유사하고, 단가가 전년 수량과 유사한 경우)
+      const isSwapped =
+        prevQty !== prevPrice &&
+        Math.abs(qty - prevPrice) / prevPrice <= 0.25 &&
+        Math.abs(price - prevQty) / prevQty <= 0.25;
+
+      // 2) 자릿수 '0' 추가 실수 (약 8~12배)
+      const isQty10x = qtyRatio >= 8.0 && qtyRatio <= 12.0;
+      const isPrice10x = priceRatio >= 8.0 && priceRatio <= 12.0;
+      const isTotal10x = totalRatio >= 8.0 && totalRatio <= 12.0;
+      const is10xError = !isSwapped && (isQty10x || isPrice10x || isTotal10x);
+
+      // 3) 자릿수 '0' 누락 실수 (약 0.08~0.12배)
+      const isQtyOneTenth = qtyRatio >= 0.08 && qtyRatio <= 0.12;
+      const isPriceOneTenth = priceRatio >= 0.08 && priceRatio <= 0.12;
+      const isTotalOneTenth = totalRatio >= 0.08 && totalRatio <= 0.12;
+      const isOneTenthError = !isSwapped && (isQtyOneTenth || isPriceOneTenth || isTotalOneTenth);
+
+      // 4) ±30% 초과 급등락 여부
+      const isQtyAbnormal = Math.abs(qtyPct) > 30;
+      const isPriceAbnormal = Math.abs(pricePct) > 30;
+      const isTotalAbnormal = Math.abs(totalPct) > 30;
+
+      const hasAnomaly = isSwapped || is10xError || isOneTenthError || isQtyAbnormal || isPriceAbnormal || isTotalAbnormal;
+
+      let diagnosisMessage = '';
+      let suspectFields = []; // 'qty', 'price'
+
+      if (isSwapped) {
+        diagnosisMessage = '수량과 단가 입력란이 서로 바뀌어 입력되었을 가능성이 높습니다.';
+        suspectFields = ['qty', 'price'];
+      } else if (is10xError) {
+        diagnosisMessage = "숫자 '0'이 하나 더 입력된 자릿수 오기(약 10배 초과) 가능성이 매우 높습니다.";
+        if (isQty10x) suspectFields.push('qty');
+        if (isPrice10x) suspectFields.push('price');
+        if (suspectFields.length === 0) suspectFields = ['qty', 'price'];
+      } else if (isOneTenthError) {
+        diagnosisMessage = "숫자 '0'이 누락된 자릿수 오기(1/10 축소) 가능성이 높습니다.";
+        if (isQtyOneTenth) suspectFields.push('qty');
+        if (isPriceOneTenth) suspectFields.push('price');
+        if (suspectFields.length === 0) suspectFields = ['qty', 'price'];
+      } else if (hasAnomaly) {
+        diagnosisMessage = '전년도 실적 대비 비정상적인 변동 폭(±30% 초과)이 감지되었습니다.';
+        if (isQtyAbnormal) suspectFields.push('qty');
+        if (isPriceAbnormal) suspectFields.push('price');
+        if (suspectFields.length === 0) suspectFields = ['qty', 'price'];
+      }
+
+      return {
+        hasAnomaly,
+        isSwapped,
+        is10xError,
+        isOneTenthError,
+        diagnosisMessage,
+        suspectFields,
+        qty,
+        price,
+        total,
+        prevQty,
+        prevPrice,
+        prevTotal,
+        qtyPct,
+        pricePct,
+        totalPct
+      };
+    }
+
+    // 개별 변동률의 상태 배지 스타일 산출
+    function getMetricSeverity(pct, forceCritical = false) {
+      const absPct = Math.abs(pct);
+      if (forceCritical || absPct > 100) {
+        return {
+          label: '위험',
+          badgeClass: 'bg-rose-100 text-rose-700 border border-rose-200',
+          textClass: 'text-rose-600'
+        };
+      }
+      if (absPct > 30) {
+        return {
+          label: '주의',
+          badgeClass: 'bg-amber-100 text-amber-800 border border-amber-200',
+          textClass: 'text-amber-600'
+        };
+      }
+      return {
+        label: '정상',
+        badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+        textClass: 'text-emerald-600'
+      };
+    }
+
+    // 실시간 비교 패널 UI 갱신
+    function updateLiveComparison() {
+      const item = getSelectedBaselineItem();
+      if (!item) return;
+
+      const qtyVal = parseFloat(document.getElementById('report-qty').value);
+      const priceVal = parseFloat(document.getElementById('report-price').value);
+      const prevTotal = item.prevQty * item.prevPrice;
+
+      // 합계 금액 업데이트
+      if (!isNaN(qtyVal) && !isNaN(priceVal) && qtyVal > 0 && priceVal > 0) {
+        const total = qtyVal * priceVal;
+        document.getElementById('calculated-total').textContent = formatNumber(total);
+        document.getElementById('total-amount-korean').textContent = formatKoreanCurrencyReadout(total);
+      } else {
+        document.getElementById('calculated-total').textContent = '0';
+        document.getElementById('total-amount-korean').textContent = '수량과 단가를 입력하면 자동 계산됩니다.';
+      }
+
+      // 미입력 상태 처리
+      if (isNaN(qtyVal) || isNaN(priceVal) || qtyVal <= 0 || priceVal <= 0) {
+        document.getElementById('live-overall-badge').className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600';
+        document.getElementById('live-overall-badge').textContent = '입력 대기';
+
+        ['qty', 'price', 'total'].forEach(key => {
+          document.getElementById(`comp-${key}-pct`).className = 'text-sm font-bold text-slate-400 tabular-nums';
+          document.getElementById(`comp-${key}-pct`).textContent = '-';
+          document.getElementById(`comp-${key}-badge`).className = 'px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-500';
+          document.getElementById(`comp-${key}-badge`).textContent = '대기';
+        });
+
+        document.getElementById('comp-qty-sub').textContent = `기준 ${formatNumber(item.prevQty)}${item.unit} 대비 -`;
+        document.getElementById('comp-price-sub').textContent = `기준 ${formatNumber(item.prevPrice)}원 대비 -`;
+        document.getElementById('comp-total-sub').textContent = `기준 ${formatNumber(prevTotal)}원 대비 -`;
+
+        const diagBox = document.getElementById('live-diagnostic-box');
+        diagBox.className = 'rounded-xl p-4 bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-3';
+        document.getElementById('live-diagnostic-text').textContent =
+          '수량과 단가를 입력하면 전년도 실적과 자동 비교하여 자릿수 오기, 항목 바뀜, 급등락 여부를 실시간으로 진단합니다.';
+        return;
+      }
+
+      // 수치 입력 완료 시 실시간 분석 실행
+      const result = analyzeAnomaly(item, qtyVal, priceVal);
+      const qtySev = getMetricSeverity(result.qtyPct, result.isSwapped);
+      const priceSev = getMetricSeverity(result.pricePct, result.isSwapped);
+      const totalSev = getMetricSeverity(result.totalPct, result.isSwapped);
+
+      // 수량 행
+      document.getElementById('comp-qty-sub').textContent = `기준 ${formatNumber(item.prevQty)}${item.unit} → 입력 ${formatNumber(qtyVal)}${item.unit}`;
+      document.getElementById('comp-qty-pct').textContent = formatSignedPercent(result.qtyPct);
+      document.getElementById('comp-qty-pct').className = `text-sm font-bold tabular-nums ${qtySev.textClass}`;
+      document.getElementById('comp-qty-badge').textContent = qtySev.label;
+      document.getElementById('comp-qty-badge').className = `px-2 py-0.5 rounded-md text-xs font-semibold ${qtySev.badgeClass}`;
+
+      // 단가 행
+      document.getElementById('comp-price-sub').textContent = `기준 ${formatNumber(item.prevPrice)}원 → 입력 ${formatNumber(priceVal)}원`;
+      document.getElementById('comp-price-pct').textContent = formatSignedPercent(result.pricePct);
+      document.getElementById('comp-price-pct').className = `text-sm font-bold tabular-nums ${priceSev.textClass}`;
+      document.getElementById('comp-price-badge').textContent = priceSev.label;
+      document.getElementById('comp-price-badge').className = `px-2 py-0.5 rounded-md text-xs font-semibold ${priceSev.badgeClass}`;
+
+      // 총액 행
+      document.getElementById('comp-total-sub').textContent = `기준 ${formatNumber(prevTotal)}원 → 입력 ${formatNumber(result.total)}원`;
+      document.getElementById('comp-total-pct').textContent = formatSignedPercent(result.totalPct);
+      document.getElementById('comp-total-pct').className = `text-sm font-bold tabular-nums ${totalSev.textClass}`;
+      document.getElementById('comp-total-badge').textContent = totalSev.label;
+      document.getElementById('comp-total-badge').className = `px-2 py-0.5 rounded-md text-xs font-semibold ${totalSev.badgeClass}`;
+
+      // 상단 종합 배지 및 하단 진단 메시지
+      const overallBadge = document.getElementById('live-overall-badge');
+      const diagBox = document.getElementById('live-diagnostic-box');
+      const diagText = document.getElementById('live-diagnostic-text');
+
+      if (!result.hasAnomaly) {
+        overallBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
+        overallBadge.textContent = '정상 범위 (±30% 이내)';
+
+        diagBox.className = 'rounded-xl p-4 bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-3';
+        diagText.innerHTML = `<strong class="block font-bold text-emerald-800 mb-0.5">전년도 기준 정상 허용 범위 내 입력입니다.</strong>별도의 예외 승인 절차 없이 즉시 회계 원장으로 자동 승인 처리할 수 있습니다.`;
+      } else {
+        const isCritical = result.isSwapped || result.is10xError || result.isOneTenthError || Math.abs(result.totalPct) > 100;
+        if (isCritical) {
+          overallBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+          overallBadge.textContent = '위험 · 입력 오류 의심';
+          diagBox.className = 'rounded-xl p-4 bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start gap-3';
+          diagText.innerHTML = `<strong class="block font-bold text-rose-800 mb-0.5">이상 수치 감지 경고</strong>${result.diagnosisMessage}`;
+        } else {
+          overallBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800';
+          overallBadge.textContent = '주의 · 임계치 초과';
+          diagBox.className = 'rounded-xl p-4 bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-3';
+          diagText.innerHTML = `<strong class="block font-bold text-amber-800 mb-0.5">변동 폭 주의 안내</strong>${result.diagnosisMessage}`;
+        }
+      }
+    }
+
+    // 6. 빠른 시연용 테스트 프리셋 적용
+    function applyPreset(type) {
+      clearInputHighlights();
+      wasRecentlyBlocked = false;
+      document.getElementById('correction-mode-badge').classList.add('hidden');
+
+      const itemSelect = document.getElementById('report-item');
+      const deptSelect = document.getElementById('report-dept');
+      const qtyInput = document.getElementById('report-qty');
+      const priceInput = document.getElementById('report-price');
+      const noteInput = document.getElementById('report-note');
+
+      if (type === 'A') {
+        // 시나리오 A: 정상 범위 보고 입력 (사무용품 구매, 52박스, 25,500원)
+        itemSelect.value = 'ITEM-01';
+        handleItemChange();
+        deptSelect.value = '회계팀';
+        qtyInput.value = 52;
+        priceInput.value = 25500;
+        noteInput.value = '11월 정기 사무용품 및 A4 복사용지 보충 구매';
+        showToast('시나리오 A (정상 범위) 데이터가 입력되었습니다.', 'info');
+      } else if (type === 'B') {
+        // 시나리오 B: 자릿수 '0' 추가 실수 (원자재 매입, 10,000개, 12,000원 -> 전년 1,000개 대비 10배)
+        itemSelect.value = 'ITEM-02';
+        handleItemChange();
+        deptSelect.value = '구매팀';
+        qtyInput.value = 10000;
+        priceInput.value = 12000;
+        noteInput.value = '4분기 생산라인 핵심 공정 부품 정기 발주';
+        showToast("시나리오 B (자릿수 '0' 추가 실수) 데이터가 입력되었습니다. 제출 버튼을 눌러 검증을 확인하세요.", 'warning');
+      } else if (type === 'C') {
+        // 시나리오 C: 수량·단가 뒤바뀜 실수 (물류 운송비, 수량 85,000건, 단가 120원)
+        itemSelect.value = 'ITEM-03';
+        handleItemChange();
+        deptSelect.value = '물류팀';
+        qtyInput.value = 85000;
+        priceInput.value = 120;
+        noteInput.value = '11월 수도권 정기 물류 배송 용역비 정산';
+        showToast('시나리오 C (수량·단가 바뀜 실수) 데이터가 입력되었습니다. 제출 버튼을 눌러 검증을 확인하세요.', 'warning');
+      }
+
+      updateLiveComparison();
+    }
+
+    function clearInputHighlights() {
+      document.getElementById('report-qty').classList.remove('input-error-highlight');
+      document.getElementById('report-price').classList.remove('input-error-highlight');
+    }
+
+    function resetInputForm() {
+      document.getElementById('report-date').value = '2026-11-25';
+      document.getElementById('report-dept').value = '회계팀';
+      document.getElementById('report-author').value = '김신입';
+      document.getElementById('report-qty').value = '';
+      document.getElementById('report-price').value = '';
+      document.getElementById('report-note').value = '';
+      wasRecentlyBlocked = false;
+      document.getElementById('correction-mode-badge').classList.add('hidden');
+      clearInputHighlights();
+      updateLiveComparison();
+      showToast('입력 폼이 초기화되었습니다.', 'info');
+    }
+
+    // 7. 폼 제출 및 이상 수치 감지 경고 모달 제어
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      clearInputHighlights();
+
+      const item = getSelectedBaselineItem();
+      const date = document.getElementById('report-date').value;
+      const dept = document.getElementById('report-dept').value;
+      const author = document.getElementById('report-author').value.trim() || '김신입';
+      const qty = parseFloat(document.getElementById('report-qty').value);
+      const price = parseFloat(document.getElementById('report-price').value);
+      const note = document.getElementById('report-note').value.trim();
+
+      if (!item || isNaN(qty) || isNaN(price) || qty <= 0 || price <= 0) {
+        showToast('수량과 단가를 올바르게 입력해 주세요.', 'error');
+        return;
+      }
+
+      const detection = analyzeAnomaly(item, qty, price);
+      const nowTime = new Date().toTimeString().slice(0, 5);
+
+      pendingSubmissionPayload = {
+        id: `DOC-2026-${String(appState.ledgerEntries.length + 1).padStart(3, '0')}`,
+        datetime: `${date} ${nowTime}`,
+        dept,
+        author,
+        itemId: item.id,
+        itemName: item.name,
+        unit: item.unit,
+        qty,
+        price,
+        total: detection.total,
+        note: note || `${item.name} 정기 실적 보고`
+      };
+
+      // 이상 수치 감지 시 -> 제출 차단 및 경고 모달 표시
+      if (detection.hasAnomaly) {
+        lastDetectionResult = detection;
+        openAnomalyModal(item, detection);
+        return;
+      }
+
+      // 정상 범위 통과 시 -> 원장 즉시 등록
+      const finalStatus = wasRecentlyBlocked ? '실수 수정 후 승인' : '정상 승인';
+      if (wasRecentlyBlocked) {
+        pendingSubmissionPayload.note = `[오류 정정 완료] ${pendingSubmissionPayload.note}`;
+      }
+      pendingSubmissionPayload.status = finalStatus;
+
+      appState.ledgerEntries.unshift(pendingSubmissionPayload);
+      saveState();
+
+      wasRecentlyBlocked = false;
+      document.getElementById('correction-mode-badge').classList.add('hidden');
+
+      showToast(`회계 보고가 '${finalStatus}' 상태로 전사 원장에 반영되었습니다.`, 'success');
+      resetInputFormAfterSuccess();
+    }
+
+    function resetInputFormAfterSuccess() {
+      document.getElementById('report-qty').value = '';
+      document.getElementById('report-price').value = '';
+      document.getElementById('report-note').value = '';
+      updateLiveComparison();
+    }
+
+    function openAnomalyModal(item, detection) {
+      document.getElementById('modal-diagnosis-msg').textContent = detection.diagnosisMessage;
+      document.getElementById('modal-item-subtitle').textContent = `대상 계정 및 품목: [${item.account}] ${item.name}`;
+
+      const qtySev = getMetricSeverity(detection.qtyPct, detection.isSwapped);
+      const priceSev = getMetricSeverity(detection.pricePct, detection.isSwapped);
+      const totalSev = getMetricSeverity(detection.totalPct, detection.isSwapped);
+
+      const rows = [
+        {
+          label: '보고 수량',
+          prev: `${formatNumber(detection.prevQty)}${item.unit}`,
+          curr: `${formatNumber(detection.qty)}${item.unit}`,
+          pct: formatSignedPercent(detection.qtyPct),
+          sev: qtySev
+        },
+        {
+          label: '보고 단가',
+          prev: `${formatNumber(detection.prevPrice)}원`,
+          curr: `${formatNumber(detection.price)}원`,
+          pct: formatSignedPercent(detection.pricePct),
+          sev: priceSev
+        },
+        {
+          label: '합계 금액',
+          prev: `${formatNumber(detection.prevTotal)}원`,
+          curr: `${formatNumber(detection.total)}원`,
+          pct: formatSignedPercent(detection.totalPct),
+          sev: totalSev
+        }
+      ];
+
+      const tbody = document.getElementById('modal-comparison-tbody');
+      tbody.innerHTML = rows.map(r => `
+        <tr class="hover:bg-slate-50/70">
+          <td class="py-3 px-3.5 font-semibold text-slate-800">${r.label}</td>
+          <td class="py-3 px-3.5 text-right text-slate-600">${r.prev}</td>
+          <td class="py-3 px-3.5 text-right font-bold ${r.sev.label !== '정상' ? 'text-rose-600' : 'text-slate-900'}">${r.curr}</td>
+          <td class="py-3 px-3.5 text-right font-bold ${r.sev.textClass}">${r.pct}</td>
+          <td class="py-3 px-3.5 text-center">
+            <span class="px-2 py-0.5 rounded-md text-xs font-bold ${r.sev.badgeClass}">${r.sev.label}</span>
+          </td>
+        </tr>
+      `).join('');
+
+      // 예외 사유서 박스 초기화
+      document.getElementById('exception-reason-box').classList.add('hidden');
+      document.getElementById('exception-reason-input').value = '';
+
+      const modal = document.getElementById('anomaly-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeAnomalyModal() {
+      const modal = document.getElementById('anomaly-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // 모달 버튼 1: [입력값 다시 수정하기]
+    function handleFixInputAction() {
+      closeAnomalyModal();
+
+      // 사전 차단 실수 건수 및 예방된 회계 오기 금액 카운트 증가
+      if (lastDetectionResult) {
+        appState.blockedCount += 1;
+        const errorDiff = Math.abs(lastDetectionResult.total - lastDetectionResult.prevTotal);
+        appState.preventedErrorAmount += errorDiff;
+        saveState();
+      }
+
+      wasRecentlyBlocked = true;
+      document.getElementById('correction-mode-badge').classList.remove('hidden');
+
+      // 의심 필드에 빨간색 테두리 강조 및 포커스
+      clearInputHighlights();
+      const suspects = (lastDetectionResult && lastDetectionResult.suspectFields) || ['qty'];
+      if (suspects.includes('qty')) {
+        document.getElementById('report-qty').classList.add('input-error-highlight');
+      }
+      if (suspects.includes('price')) {
+        document.getElementById('report-price').classList.add('input-error-highlight');
+      }
+
+      const firstTargetId = suspects[0] === 'price' ? 'report-price' : 'report-qty';
+      const targetEl = document.getElementById(firstTargetId);
+      if (targetEl) {
+        targetEl.focus();
+        targetEl.select();
+      }
+
+      showToast('입력 오류를 사전 차단했습니다. 붉게 표시된 항목을 수정 후 다시 제출하세요.', 'warning');
+    }
+
+    // 모달 버튼 2: [사유서 작성 후 예외 승인 요청] 토글 및 제출
+    function toggleExceptionReasonBox() {
+      const box = document.getElementById('exception-reason-box');
+      box.classList.toggle('hidden');
+      if (!box.classList.contains('hidden')) {
+        document.getElementById('exception-reason-input').focus();
+      }
+    }
+
+    function submitWithException() {
+      const reason = document.getElementById('exception-reason-input').value.trim();
+      if (!reason) {
+        showToast('예외 승인 요청을 위해 변동 사유서를 반드시 입력해 주세요.', 'error');
+        document.getElementById('exception-reason-input').focus();
+        return;
+      }
+
+      if (pendingSubmissionPayload) {
+        pendingSubmissionPayload.status = '예외 승인 대기';
+        pendingSubmissionPayload.note = `[예외사유] ${reason}`;
+        appState.ledgerEntries.unshift(pendingSubmissionPayload);
+        saveState();
+      }
+
+      closeAnomalyModal();
+      wasRecentlyBlocked = false;
+      document.getElementById('correction-mode-badge').classList.add('hidden');
+      resetInputFormAfterSuccess();
+      showToast("사유서가 첨부되어 '예외 승인 대기' 상태로 결재 상신되었습니다.", 'info');
+    }
+
+    // 8. [탭 2] 전사 회계 원장 대시보드 및 Chart.js 시각화
+    function renderLedgerDashboard() {
+      const entries = appState.ledgerEntries;
+
+      // KPI 카드 업데이트
+      const totalCount = entries.length;
+      const approvedCount = entries.filter(e => e.status === '정상 승인' || e.status === '실수 수정 후 승인').length;
+
+      document.getElementById('kpi-total-count').textContent = `${formatNumber(totalCount)}건`;
+      document.getElementById('kpi-approved-count').textContent = `${formatNumber(approvedCount)}건`;
+      document.getElementById('kpi-blocked-count').textContent = `${formatNumber(appState.blockedCount)}건`;
+      document.getElementById('kpi-prevented-amount').textContent = `${formatNumber(appState.preventedErrorAmount)}원`;
+
+      // Chart.js 막대그래프 렌더링
+      renderComparisonChart();
+
+      // 감사 로그 테이블 렌더링
+      renderLedgerTable();
+    }
+
+    function renderComparisonChart() {
+      const ctx = document.getElementById('comparisonChart');
+      if (!ctx) return;
+
+      const labels = appState.baselineItems.map(item => item.account);
+      const prevYearData = appState.baselineItems.map(item => item.prevQty * item.prevPrice);
+      const currYearData = appState.baselineItems.map(item => {
+        return appState.ledgerEntries
+          .filter(entry => entry.itemId === item.id)
+          .reduce((sum, entry) => sum + entry.total, 0);
+      });
+
+      if (comparisonChartInstance) {
+        comparisonChartInstance.destroy();
+      }
+
+      comparisonChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: '2025년 기준 실적 (원)',
+              data: prevYearData,
+              backgroundColor: '#94a3b8',
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.7
+            },
+            {
+              label: '2026년 누적 보고액 (원)',
+              data: currYearData,
+              backgroundColor: '#2563eb',
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.7
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              padding: 12,
+              titleFont: { family: 'Pretendard', size: 13 },
+              bodyFont: { family: 'Pretendard', size: 12 },
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${formatNumber(context.parsed.y)}원`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { family: 'Pretendard', size: 12, weight: '600' },
+                color: '#334155'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                font: { family: 'Pretendard', size: 11 },
+                color: '#64748b',
+                callback: function(value) {
+                  if (value >= 100000000) return (value / 100000000).toFixed(1) + '억원';
+                  if (value >= 10000) return (value / 10000).toLocaleString() + '만원';
+                  return value + '원';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function setLedgerFilter(filterValue) {
+      currentLedgerFilter = filterValue;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filter === filterValue) {
+          btn.className = 'filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition';
+        } else {
+          btn.className = 'filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+        }
+      });
+      renderLedgerTable();
+    }
+
+    function renderLedgerTable() {
+      const tbody = document.getElementById('ledger-table-body');
+      const filtered = currentLedgerFilter === 'ALL'
+        ? appState.ledgerEntries
+        : appState.ledgerEntries.filter(e => e.status === currentLedgerFilter);
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="py-10 text-center text-sm text-slate-400">해당 조건에 일치하는 회계 원장 내역이 없습니다.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(entry => {
+        let badgeStyle = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+        if (entry.status === '실수 수정 후 승인') {
+          badgeStyle = 'bg-blue-100 text-blue-700 border border-blue-200';
+        } else if (entry.status === '예외 승인 대기') {
+          badgeStyle = 'bg-amber-100 text-amber-800 border border-amber-200';
+        }
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3.5 px-4 text-xs text-slate-500 tabular-nums whitespace-nowrap">${entry.datetime}</td>
+            <td class="py-3.5 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">${entry.dept}</td>
+            <td class="py-3.5 px-4 text-xs text-slate-700 whitespace-nowrap">${entry.author}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-slate-900 text-xs sm:text-sm">${entry.itemName}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5 line-clamp-1">${entry.note || ''}</div>
+            </td>
+            <td class="py-3.5 px-4 text-right text-xs sm:text-sm text-slate-700 tabular-nums whitespace-nowrap">${formatNumber(entry.qty)}${entry.unit || ''}</td>
+            <td class="py-3.5 px-4 text-right text-xs sm:text-sm text-slate-700 tabular-nums whitespace-nowrap">${formatNumber(entry.price)}원</td>
+            <td class="py-3.5 px-4 text-right text-xs sm:text-sm font-bold text-slate-900 tabular-nums whitespace-nowrap">${formatNumber(entry.total)}원</td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeStyle}">${entry.status}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 9. [탭 3] 전년도(2025년) 기준 데이터 관리
+    function renderBaselineTable() {
+      const tbody = document.getElementById('baseline-table-body');
+      tbody.innerHTML = appState.baselineItems.map(item => {
+        const total = item.prevQty * item.prevPrice;
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3.5 px-5 text-xs font-mono text-slate-500 whitespace-nowrap">${item.id}</td>
+            <td class="py-3.5 px-5 whitespace-nowrap">
+              <span class="px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">${item.account}</span>
+            </td>
+            <td class="py-3.5 px-5 font-semibold text-slate-900">${item.name}</td>
+            <td class="py-3.5 px-5 text-right text-slate-700 tabular-nums whitespace-nowrap">${formatNumber(item.prevQty)}${item.unit}</td>
+            <td class="py-3.5 px-5 text-right text-slate-700 tabular-nums whitespace-nowrap">${formatNumber(item.prevPrice)}원</td>
+            <td class="py-3.5 px-5 text-right font-bold text-blue-700 tabular-nums whitespace-nowrap">${formatNumber(total)}원</td>
+            <td class="py-3.5 px-5 text-center whitespace-nowrap">
+              <button type="button" onclick="openBaselineModal('${item.id}')"
+                class="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-xs font-semibold text-slate-600 hover:text-blue-700 transition inline-flex items-center gap-1">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                <span>수정</span>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function openBaselineModal(itemId = null) {
+      const modal = document.getElementById('baseline-modal');
+      const titleEl = document.getElementById('baseline-modal-title');
+      const idInput = document.getElementById('edit-baseline-id');
+
+      if (itemId) {
+        const item = appState.baselineItems.find(i => i.id === itemId);
+        if (!item) return;
+        titleEl.textContent = '전년도(2025년) 기준 데이터 수정';
+        idInput.value = item.id;
+        document.getElementById('base-account').value = item.account;
+        document.getElementById('base-name').value = item.name;
+        document.getElementById('base-unit').value = item.unit;
+        document.getElementById('base-qty').value = item.prevQty;
+        document.getElementById('base-price').value = item.prevPrice;
+      } else {
+        titleEl.textContent = '새 전년도 기준 항목 추가';
+        idInput.value = '';
+        document.getElementById('baseline-form').reset();
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeBaselineModal() {
+      const modal = document.getElementById('baseline-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function saveBaselineItem(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-baseline-id').value;
+      const account = document.getElementById('base-account').value.trim();
+      const name = document.getElementById('base-name').value.trim();
+      const unit = document.getElementById('base-unit').value.trim();
+      const prevQty = parseFloat(document.getElementById('base-qty').value);
+      const prevPrice = parseFloat(document.getElementById('base-price').value);
+
+      if (!account || !name || !unit || isNaN(prevQty) || isNaN(prevPrice) || prevQty <= 0 || prevPrice <= 0) {
+        showToast('모든 항목을 올바르게 입력해 주세요.', 'error');
+        return;
+      }
+
+      if (editId) {
+        const idx = appState.baselineItems.findIndex(i => i.id === editId);
+        if (idx !== -1) {
+          appState.baselineItems[idx] = { id: editId, account, name, unit, prevQty, prevPrice };
+        }
+        showToast('기준 데이터가 수정되어 검증 엔진에 즉시 반영되었습니다.', 'success');
+      } else {
+        const newId = `ITEM-${String(appState.baselineItems.length + 1).padStart(2, '0')}`;
+        appState.baselineItems.push({ id: newId, account, name, unit, prevQty, prevPrice });
+        showToast('새 회계 기준 항목이 추가되었습니다.', 'success');
+      }
+
+      saveState();
+      closeBaselineModal();
+      renderBaselineTable();
+      populateItemDropdown();
+    }
+
+    // 10. 데모 초기화 모달 및 토스트 알림
+    function openResetConfirmModal() {
+      const modal = document.getElementById('reset-confirm-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeResetConfirmModal() {
+      const modal = document.getElementById('reset-confirm-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function executeDemoReset() {
+      localStorage.removeItem(STORAGE_KEY);
+      loadState();
+      populateItemDropdown();
+      resetInputForm();
+      if (currentTab === 'tab-ledger') renderLedgerDashboard();
+      if (currentTab === 'tab-baseline') renderBaselineTable();
+      closeResetConfirmModal();
+      showToast('시연용 초기 데이터로 복원되었습니다.', 'info');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+
+      const styles = {
+        success: 'bg-slate-900 text-white border-emerald-500/60',
+        warning: 'bg-slate-900 text-white border-amber-500/60',
+        error: 'bg-rose-950 text-white border-rose-500',
+        info: 'bg-slate-900 text-white border-blue-500/60'
+      };
+      const icons = {
+        success: 'check-circle-2',
+        warning: 'alert-triangle',
+        error: 'x-circle',
+        info: 'info'
+      };
+      const iconColors = {
+        success: 'text-emerald-400',
+        warning: 'text-amber-400',
+        error: 'text-rose-400',
+        info: 'text-blue-400'
+      };
+
+      toast.className = `pointer-events-auto flex items-start gap-3 px-4 py-3.5 rounded-xl border shadow-lg text-xs leading-relaxed transition-all duration-200 ${styles[type] || styles.info}`;
+      toast.innerHTML = `
+        <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0 mt-0.5 ${iconColors[type] || 'text-blue-400'}"></i>
+        <span class="flex-1 font-medium">${message}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(6px)';
+        setTimeout(() => toast.remove(), 220);
+      }, 3600);
+    }
+
+    // 11. 초기 실행
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      populateItemDropdown();
+      renderLedgerDashboard();
+      renderBaselineTable();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
